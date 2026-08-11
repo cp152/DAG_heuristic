@@ -1,0 +1,7 @@
+{
+  "benchmark_id": "deferred_w_competition",
+  "benchmark_sha256": "8f253302b554e2dfaa936d6b7edfae2fee7f247129e604a8b900e9534b99b024",
+  "optimal_makespan": 9,
+  "oracle": "exact_optional",
+  "schema_version": "1.0"
+}

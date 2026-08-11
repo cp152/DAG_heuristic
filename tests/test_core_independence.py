@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_core_has_no_simai_or_legacy_package_imports() -> None:
     violations = []
-    for path in (ROOT / "src/dag_heuristic").rglob("*.py"):
+    for path in (ROOT / "src").rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module:

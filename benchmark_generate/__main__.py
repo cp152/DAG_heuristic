@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from benchmark_generate.export_current import export_suite
-from benchmark_generate.reference_results import generate_reference_results
+from benchmark_generate.export import export_suite
+from benchmark_generate.reference import generate_reference_results
 
 
 def main() -> None:

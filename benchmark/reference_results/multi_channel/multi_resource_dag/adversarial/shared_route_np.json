@@ -1,7 +1,0 @@
-{
-  "benchmark_id": "shared_route_np",
-  "benchmark_sha256": "2904094d3b0ca3374d8b5fbdc4c63c758dac758c9e3d807b688f7360e64955ca",
-  "optimal_makespan": 11,
-  "oracle": "exact_optional",
-  "schema_version": "1.0"
-}

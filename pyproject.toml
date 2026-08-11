@@ -14,12 +14,15 @@ dependencies = []
 dev = ["pytest>=8", "ruff>=0.9"]
 
 [project.scripts]
-dag-heuristic = "dag_heuristic.cli:main"
+dag-schedule = "cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["cli", "registry"]
 
 [tool.setuptools.packages.find]
-where = ["src", "."]
-include = ["dag_heuristic*", "benchmark_generate*"]
-exclude = ["tests*", "third_party*"]
+where = ["src"]
+include = ["benchmark*", "core*", "single_channel*", "muti_channel*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", ".", ".."]

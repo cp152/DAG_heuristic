@@ -1,0 +1,7 @@
+{
+  "benchmark_id": "nonmaximal_start_np",
+  "benchmark_sha256": "64fde3d5ef82631ec31d3943e2a25b47839c008bab87f8a1ebc13c82e6f9d15a",
+  "optimal_makespan": 8,
+  "oracle": "exact_optional",
+  "schema_version": "1.0"
+}

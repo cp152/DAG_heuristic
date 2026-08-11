@@ -1,0 +1,7 @@
+{
+  "benchmark_id": "optimizer_dp_burst",
+  "benchmark_sha256": "664a351344a8a2bdee7d52e0bf11b29519e23f90c43729ced3b8ac1808dfcf66",
+  "optimal_makespan": 11,
+  "oracle": "exact_optional",
+  "schema_version": "1.0"
+}

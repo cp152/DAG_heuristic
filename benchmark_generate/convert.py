@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Hashable, Iterable
 
-from dag_heuristic.benchmark import Benchmark, Resource, Task
+from benchmark import Benchmark, Resource, Task
 
 
 def parallel_chains_to_benchmark(
@@ -60,7 +60,7 @@ def dag_to_benchmark(
     return Benchmark(
         benchmark_id=dag.name,
         scenario="single_channel",
-        family="general_dag",
+        family="complex_chain",
         category=_category(category),
         tasks=tasks,
         resources=(Resource("channel:0", "channel"),),
@@ -98,8 +98,8 @@ def multi_resource_to_benchmark(
     )
     return Benchmark(
         benchmark_id=instance.dag.name,
-        scenario="multi_channel",
-        family="multi_resource_dag",
+        scenario="muti_channel",
+        family="complex_chain",
         category=_category(category),
         tasks=tasks,
         resources=resources,

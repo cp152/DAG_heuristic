@@ -11,8 +11,8 @@
   "properties": {
     "schema_version": {"const": "1.0"},
     "id": {"type": "string", "minLength": 1},
-    "scenario": {"enum": ["single_channel", "multi_channel"]},
-    "family": {"enum": ["parallel_chain", "general_dag", "multi_resource_dag"]},
+    "scenario": {"enum": ["single_channel", "muti_channel"]},
+    "family": {"enum": ["parallel_chain", "complex_chain"]},
     "category": {"enum": ["random", "adversarial", "real"]},
     "objective": {"const": "makespan"},
     "time_unit": {"type": "string", "minLength": 1},

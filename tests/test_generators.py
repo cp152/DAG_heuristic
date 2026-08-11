@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from benchmark_generate.export_current import export_suite
-from dag_heuristic.benchmark import load_benchmark
+from benchmark_generate.export import export_suite
+from benchmark import load_benchmark
 
 
 def _payloads(root: Path) -> dict[str, bytes]:
