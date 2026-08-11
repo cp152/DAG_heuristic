@@ -89,28 +89,6 @@ queue<int> c_q;
 priority_queue<pair<int,int>> t_q;
 
 int main(int argc, char* argv[]) {
-    // ios::sync_with_stdio(false);
-    // cin.tie(nullptr);
-
-    // if (argc < 4) {
-    //     cerr << "Usage: " << argv[0] << " <G_file> <P_file> <output_file>" << std::endl;
-    //     return 1;
-    // }
-
-    // string G_loc = argv[1];
-    // string P_loc = argv[2];
-    // string out_loc = argv[3];
-    // if (argc >= 5) {
-    //     T = std::stoi(argv[4]);
-    // } else {
-    //     T = 1;
-    // }
-
-    // std::ifstream gin(G_loc);
-    // if (!gin) {
-    //     cerr << "Failed to open graph file: " << G_loc << std::endl;
-    //     return 1;
-    // }
     cin >> n >> m;
     for (int i = 1; i <= n; ++i) {
         char c;
@@ -124,18 +102,6 @@ int main(int argc, char* argv[]) {
         adj[u].push_back(v);
         in[v]++;
     }
-
-    // std::ifstream pin(P_loc);
-    // if (!pin) {
-    //     cerr << "Failed to open priority file: " << P_loc << std::endl;
-    //     return 1;
-    // }
-    // std::ofstream fout(out_loc);
-    // if (!fout) {
-    //     cerr << "Failed to open output file: " << out_loc << std::endl;
-    //     return 1;
-    // }
-
     F.init();
     ans = 0;
     while(!c_q.empty()) c_q.pop();
@@ -151,7 +117,6 @@ int main(int argc, char* argv[]) {
         cin >> x;
         pri[x] = i;
     }
-    cerr<<n<<' '<<m<<"!\n";
     for (int i = 1; i <= n; ++i) {
         if(res[i] == 0) {
             if(type[i] == 0) c_q.push(i);

@@ -153,4 +153,4 @@ def process_index(categorys, familys, test_loc):
 
     return result_stats
 
-process_index(["adversarial","random","real"],["complex_chain","parallel_chain"],"./single_channel/longest_tail.exe")
+process_index(["adversarial","random","real"],["complex_chain","parallel_chain"],"./single_channel/l1.exe")
