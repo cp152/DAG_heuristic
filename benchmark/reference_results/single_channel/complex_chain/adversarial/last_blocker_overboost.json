@@ -1,6 +1,6 @@
 {
   "benchmark_id": "last_blocker_overboost",
-  "benchmark_sha256": "61eb4b4a443456f8a75e4d0bb726eb51973e638898cefbe9970f7ea98de33e7e",
+  "benchmark_sha256": "31b541d299a5847af10b2d7640ff990a700ecfbe9980d1e92e021c9fbbd5cc4c",
   "optimal_makespan": 20,
   "oracle": "exact_optional",
   "schema_version": "1.0"

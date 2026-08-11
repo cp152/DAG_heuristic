@@ -58,6 +58,18 @@ third_party/                  # 可选 SimAI submodule 位置
 python -m pip install -e ".[dev]"
 ```
 
+这一步足以加载已有 benchmark、开发和运行调度算法，但不包含可选的 SimAI
+转换依赖。若要从 AICB/SimAI workload 生成真实 DAG，请先初始化 submodule，
+并额外安装其 Python 项目：
+
+```powershell
+git submodule update --init --recursive
+python -m pip install -e "./third_party/simai-flow-scheduler"
+```
+
+SimAI 当前要求 Python 3.13，并在自己的 `pyproject.toml` 中声明
+`jsonschema`、`matplotlib`、`pyyaml` 等额外依赖；该文件是这部分依赖的事实来源。
+
 运行算法：
 
 ```powershell
@@ -111,6 +123,10 @@ $env:PYTHONPATH="src;."
 python -m benchmark_generate all --samples 10 --seed 260819 --output benchmark
 python -m benchmark_generate reference --output benchmark
 ```
+
+仓库通过 `.gitattributes` 强制 `benchmark/` 中的 JSON/JSONL 使用 LF，生成器也会
+显式写入 LF。reference result 中的 SHA-256 是对 benchmark 原始字节计算的，因此
+不要用会擅自改写换行符的工具保存这些文件；遵守该规则后，不同平台上的哈希应保持一致。
 
 当前固定集合共 75 个问题：每个场景各有 10 个 random，另有 33 个带精确最优值的 adversarial 和 12 个 real 快照。
 

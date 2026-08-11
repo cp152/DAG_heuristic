@@ -1,6 +1,6 @@
 {
   "benchmark_id": "disjoint_routes_np",
-  "benchmark_sha256": "471794a58d4a2544275a55ed6be1b50b60039454880b6eed295002ed6b831e82",
+  "benchmark_sha256": "284ff0ba60212dddb1fe242501d1bb4733f052b23613f7be833479364adc034f",
   "optimal_makespan": 7,
   "oracle": "exact_optional",
   "schema_version": "1.0"

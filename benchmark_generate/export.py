@@ -158,6 +158,7 @@ def export_suite(
     (root / "index.jsonl").write_text(
         "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in rows),
         encoding="utf-8",
+        newline="\n",
     )
     return rows
 

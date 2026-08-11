@@ -44,6 +44,7 @@ def generate_reference_results(
             )
             + "\n",
             encoding="utf-8",
+            newline="\n",
         )
         written.append(target)
     return written

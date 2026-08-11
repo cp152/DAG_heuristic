@@ -116,4 +116,5 @@ def write_benchmark(benchmark: Benchmark, path: str | Path) -> None:
     target.write_text(
         json.dumps(benchmark_to_dict(benchmark), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
+        newline="\n",
     )

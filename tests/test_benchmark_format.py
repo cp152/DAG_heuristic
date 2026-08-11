@@ -42,6 +42,14 @@ def test_every_committed_benchmark_loads() -> None:
     assert {item.category for item in loaded} == {"random", "adversarial", "real"}
 
 
+def test_benchmark_files_use_lf_line_endings() -> None:
+    files = list((ROOT / "benchmark").rglob("*.json"))
+    files.append(ROOT / "benchmark/index.jsonl")
+    assert files
+    for path in files:
+        assert b"\r" not in path.read_bytes(), f"{path} must use LF line endings"
+
+
 def test_index_matches_files_and_hashes() -> None:
     import hashlib
 
