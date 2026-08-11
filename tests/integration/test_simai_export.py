@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from benchmark import validate_benchmark
-from benchmark_generate.simai.bootstrap import SIMAI_ROOT
 from benchmark_generate.simai.export import (
     MODES,
     build_synthetic_input,
@@ -29,10 +30,7 @@ def test_all_pipeline_modes_export_valid_single_channel_benchmarks() -> None:
 def test_topology_export_records_fixed_route_resources() -> None:
     header, items = build_synthetic_input()
     built = build_workload("1f1b", header, items)
-    topology = (
-        SIMAI_ROOT
-        / "inputs/topologies/AlibabaHPN_16g_8gps_DualToR_DualPlane_200Gbps_A100"
-    )
+    topology = Path(__file__).parent / "fixtures/two_gpu_topology.txt"
     case = to_benchmark(built, "synthetic_routes", topology_path=topology)
 
     validate_benchmark(case)

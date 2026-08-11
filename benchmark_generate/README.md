@@ -90,8 +90,8 @@ SimAI 查找顺序为：
 
 独立发布时推荐固定 submodule：
 
-```text
-third_party/simai-flow-scheduler/
+```powershell
+git submodule update --init --recursive
 ```
 
 `simai/export.py` 会先调用指定 pipeline builder，再用对应 serializer 把 GPU compute 顺序加入 effective DAG。communication 时长按 `ceil(size_bytes / bandwidth)` 转成整数微秒。

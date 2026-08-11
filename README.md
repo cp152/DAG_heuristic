@@ -125,4 +125,18 @@ python -m pytest -q
 
 ## SimAI 集成
 
+需要从 SimAI 生成新 benchmark 时，推荐连同 submodule 一起克隆：
+
+```powershell
+git clone --recurse-submodules https://github.com/violetandevergarden/DAG_heuristic.git
+```
+
+如果已经完成普通 clone，再执行：
+
+```powershell
+git submodule update --init --recursive
+```
+
 独立仓库中的可选位置是 `third_party/simai-flow-scheduler/`。只有 `benchmark_generate/simai/` 和对应集成测试允许依赖它。生成出来的 JSON 必须独立可读，使用算法和已有数据时无需初始化 submodule。
+
+SimAI 的 `inputs/topologies/` 默认忽略具体拓扑文件。仓库集成测试使用自身携带的最小拓扑；导出真实多通道 benchmark 时，需要通过 `--topology` 指定使用者本地的拓扑文件。
