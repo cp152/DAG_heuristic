@@ -310,7 +310,7 @@ int main(int argc, char* argv[]) {
         max_count = atoi(argv[1]);
     }
     else {
-        max_count = 100000;
+        max_count = 10000000;
     }
 
     // cerr<< max_count<<'\n';

@@ -62,6 +62,7 @@ def main():
             cpp_output = result.stdout
         except subprocess.CalledProcessError as e:
             print(f"错误: C++ 程序处理 {rel_path} 失败", file=sys.stderr)
+            # print(python_output)
             print(e.stderr, file=sys.stderr)
             continue
         except FileNotFoundError:
