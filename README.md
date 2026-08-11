@@ -1,232 +1,230 @@
-# DAG Heuristic 调度算法仓库
+# DAG Heuristic Benchmark and Algorithms
 
-这个目录是一个可独立运行的 DAG 调度算法实验仓库，用于让不同开发者在统一的任务语义、测试集和输出接口下开发、比较算法。研究路径按“并行链 → 一般 DAG → 多通道拓扑”组织。
+本仓库研究不可抢占 DAG 通信调度，并提供语言无关的 benchmark。问题数据、数据生成和算法实现彼此分离：只想使用数据的开发者可以直接读取 `benchmark/*.json`，不需要安装 Python、SimAI 或本仓库算法。
 
-## 当前实现的场景与限制
+## 调度场景
 
-### 统一调度语义
+所有场景遵循相同基础语义：
 
-- DAG 节点分为计算任务和通信任务，依赖只有在前驱任务完成后才满足。
-- 所有节点均不可抢占：任务一旦开始，必须连续运行到完成。
-- 调度器只在任务完成事件后重新决策，可以主动 `WAIT`。
-- 目标是最小化整个 DAG 的完成时间（makespan）。
-- 当前时间、任务时长和 makespan 均使用整数。
+- compute 和 communication 一旦开始就连续执行到完成；
+- `dependencies` 是 finish-to-start 依赖；
+- ready compute 自动开始，计算资源串行关系由 DAG 边表示；
+- communication 在整个传输期间独占其 resource set；
+- 调度器只在任务完成事件后决策，允许主动等待；
+- 目标是最小化 makespan。
 
-### 单通道并行链 `single_channel/parallel_chain`
+当前提供三类问题：
 
-每条链具有 `compute(r_j) -> communication(p_j) -> compute(q_j)` 结构。不同链的计算可以并行，所有通信共享一个独占 channel；任一 flow 开始后会占满 channel 并完整传输。
+| 场景 | 含义 | 主要限制 |
+|---|---|---|
+| `single_channel/parallel_chain` | 多条计算—通信交替链共享一个 channel | 没有 fork/join |
+| `single_channel/general_dag` | 任意 DAG 的通信共享一个 channel | compute 不竞争有限 GPU 资源 |
+| `multi_channel/multi_resource_dag` | flow 可同时占用多个固定 link/NIC 资源 | 不联合选路，不模拟带宽比例共享 |
 
-这个场景适合研究通信顺序、主动等待、短视 rollout 和精确动态规划。它不表达 fork/join、多个通信资源、带宽共享或路由。
+多通道中，resource set 不相交的 flow 可以并行。route 只在 benchmark 生成阶段计算；算法只处理文件中已经给出的资源集合。
 
-### 单通道一般 DAG `single_channel/complex_chain`
-
-计算和通信可以形成任意无环依赖，包括 fork、join 和多层流水。计算任务仍视为可并行，通信任务仍竞争同一个独占 channel。
-
-这个场景比并行链更接近训练 DAG 的因果结构，但仍不模拟 GPU 数量限制、计算资源竞争、具体网络路由和多链路并发。
-
-### 多通道拓扑 `muti_channel`
-
-每个 flow 使用一组固定的独占资源，例如有向链路和端点 NIC。资源集合互不相交的 flow 可以同时运行；flow 启动后持续占用完整 route resource set，直到传输完成。调度动作可以启动兼容 flow 集合，也可以选择非最大集合或 `WAIT`。
-
-当前限制如下：
-
-- 路由预先固定，算法不联合优化选路与调度；
-- 资源是排他的，不实现按比例带宽共享；
-- 不模拟链路级抢占、分片后重调度和动态路由；
-- 拓扑测试主要是小型人工图和固定路由转换图；
-- 精确 oracle 只适用于小实例；
-- `experimental_llm.py` 是尚未注册的候选实验，不代表已经验证的 LLM 特化算法。
-- `real` 测试集和流水线 DAG 导出/审计会读取主仓库的 `src/`、`inputs/`；仅复制 `DAG_heuristic/` 时，随机和人工测试仍可使用，但这些真实转换功能不可用。
-
-目录名 `muti_channel` 是现有公开接口的一部分，虽然拼写不是 `multi_channel`，扩展时请保持兼容。
-
-## 代码结构
+## 仓库结构
 
 ```text
-DAG_heuristic/
-├── README.md
-├── run.py                         # 三种场景的统一命令行入口
-├── common/
-│   ├── interface.py               # AlgorithmSpec、TestCase、makespan 接口
-│   ├── benchmark.py               # 通用 DAG 表示、构造器和 JSON 转换
-│   ├── model.py                   # 单通道不可抢占事件状态机
-│   ├── oracle.py                  # 单通道 exact DP / branch-and-bound
-│   └── oracle_benchmark.py        # 精确算法的小实例 benchmark
-├── single_channel/
-│   ├── parallel_chain/
-│   │   ├── algorithms.py          # Longest-tail、Rollout、Beam、Exact DP
-│   │   ├── interface.py           # 本场景算法注册表
-│   │   ├── testsets/              # random / adversarial / real
-│   │   └── tests/                 # 本场景回归测试
-│   └── complex_chain/
-│       ├── algorithms.py          # 一般 DAG 的优先级、Join、Rollout、Beam
-│       ├── interface.py
-│       ├── pipeline_dag_export.py # 训练流水线 DAG 导出
-│       ├── pipeline_dag_audit.py  # 有效 DAG 语义审计与指标
-│       ├── testsets/              # random / adversarial / real
-│       └── tests/
-├── muti_channel/
-│   ├── algorithms.py              # Pack、集合 Rollout、多资源 Exact Oracle
-│   ├── interface.py
-│   ├── topology_fixtures.py       # 小型固定路由拓扑
-│   ├── real_dag_adapter.py        # DAG 到 route-resource instance 的适配
-│   ├── experimental_llm.py        # 未注册的 LLM 结构候选实验
-│   ├── testsets/                  # random / adversarial / real
-│   └── tests/
-├── scripts/                       # 三个场景的便捷运行入口
-└── tests/                         # 公共接口、runner、model 和 oracle 测试
+benchmark/
+  SPECIFICATION.md                # 文件格式和调度语义
+  schema/                         # JSON Schema
+  index.jsonl                     # benchmark 索引和 SHA-256
+  single_channel/
+    parallel_chain/{random,adversarial,real}/
+    general_dag/{random,adversarial,real}/
+  multi_channel/
+    multi_resource_dag/{random,adversarial,real}/
+  reference_results/              # 与问题文件分离的最优值/参考结果
 
+benchmark_generate/
+  convert.py                      # 内部实例到标准文件的转换
+  export_current.py               # 固定种子 suite 生成
+  scenarios.py                    # 纯随机/攻击实例生成函数
+  reference_results.py            # Exact Oracle sidecar 生成
+  legacy_dag.py                   # 历史 fixture，仅供离线生成
+  simai/                          # 可选 SimAI workload/topology adapter
+
+src/dag_heuristic/
+  benchmark/                      # 中立模型、Loader、Validator
+  core/                           # 不可抢占状态机和 Exact Oracle
+  algorithms/
+    single_channel/parallel_chain/
+    single_channel/general_dag/
+    multi_channel/
+  registry.py                     # 算法注册表
+  cli.py                          # 文件驱动 CLI
+
+tests/
+  algorithms/                     # 算法回归
+  core/                           # 状态机和 Oracle
+  integration/                    # 可选 SimAI 集成
 ```
 
-当前对应关系如下：
+算法核心位于 `src/dag_heuristic`，禁止导入 SimAI 的 `src.*`、旧包路径或修改 `sys.path`。该约束有自动测试。
 
-| 旧职责 | 当前实现 |
-|---|---|
-| DAG benchmark / exact model | `common/benchmark.py`、`common/model.py`、`common/oracle.py` |
-| 并行链研究 | `single_channel/parallel_chain/` |
-| 一般 DAG 与流水线审计 | `single_channel/complex_chain/` |
-| 多资源、拓扑和真实 route adapter | `muti_channel/` |
+## Benchmark 格式
 
-导出或审计真实训练流水线 DAG：
+每个实例是 UTF-8 JSON。完整定义见 [benchmark/SPECIFICATION.md](benchmark/SPECIFICATION.md)，机器可读约束见 [dag-benchmark-v1.schema.json](benchmark/schema/dag-benchmark-v1.schema.json)。
+
+最小示例：
+
+```json
+{
+  "schema_version": "1.0",
+  "id": "two_flows",
+  "scenario": "single_channel",
+  "family": "general_dag",
+  "category": "adversarial",
+  "objective": "makespan",
+  "time_unit": "tick",
+  "semantics": {
+    "preemptive": false,
+    "decision_epoch": "task_completion",
+    "optional_idle": true,
+    "compute_model": "unbounded_parallel",
+    "resource_model": "exclusive"
+  },
+  "resources": [{"id": "channel:0", "kind": "channel"}],
+  "tasks": [
+    {
+      "id": "flow0",
+      "kind": "communication",
+      "duration": 3,
+      "dependencies": [],
+      "resources": ["channel:0"]
+    }
+  ]
+}
+```
+
+C++ 实现只需按照 specification 解析 JSON，并完成 ID 唯一性、依赖存在性、无环和 resource 引用检查。Python Loader 不是格式定义本身。
+
+## 安装与运行
+
+在独立仓库根目录安装：
 
 ```powershell
-python -m DAG_heuristic.single_channel.complex_chain.pipeline_dag_export
-python -m DAG_heuristic.single_channel.complex_chain.pipeline_dag_audit
+python -m pip install -e ".[dev]"
 ```
 
-## 测试集约定
+直接运行一个文件：
 
-每个场景都提供三类测试集：
+```powershell
+dag-heuristic benchmark/single_channel/parallel_chain/adversarial/tight_optional_wait_m20.json `
+  --algorithm longest_tail
+```
 
-| 分类 | 用途 | 要求 |
-|---|---|---|
-| `random` | 衡量普通分布上的平均表现 | 固定并报告 seed、样本数和生成范围 |
-| `adversarial` | 攻击特定贪心规则或理论猜想 | 实例应命名，并说明攻击对象与预期行为 |
-| `real` | 来自 LLM motif、导出 DAG 或拓扑适配器 | 记录 workload 和转换来源，不能称为随机实例 |
+未安装命令行入口时：
 
-测试集入口统一为：
+```powershell
+python -m dag_heuristic benchmark/multi_channel/multi_resource_dag/adversarial/nonmaximal_start_np.json `
+  --algorithm rollout_optional2
+```
+
+列出适用于某个实例的算法：
+
+```powershell
+python -m dag_heuristic path/to/case.json --list-algorithms
+```
+
+Python 中加载：
 
 ```python
-cases(category, samples=10, seed=260819) -> list[TestCase]
+from dag_heuristic.benchmark import load_benchmark
+
+benchmark = load_benchmark("benchmark/example.json")
 ```
 
-算法结果必须公开整数属性 `makespan`。测试集只负责生成实例，不应把待测算法的决策写入实例。
+## 生成 Benchmark
 
-## 仓库使用方法
-
-以下命令均从 `simai-flow-scheduler` 根目录运行。
-
-列出某个场景的算法：
+随机、攻击和结构样例由离线生成器产生，算法运行时不调用生成器：
 
 ```powershell
-python -m DAG_heuristic.run parallel_chain `
-  --algorithm longest_tail --list-algorithms
+python -m benchmark_generate all --samples 10 --seed 260819 --output benchmark
 ```
 
-运行随机并行链：
+为小型攻击实例更新 Exact Oracle sidecar：
 
 ```powershell
-python -m DAG_heuristic.run parallel_chain `
-  --algorithm rollout_wait2 --category random --samples 100 --seed 260819
+python -m benchmark_generate reference --output benchmark
 ```
 
-运行一般 DAG 攻击集：
+生成器采用稳定序列化，记录 seed 和参数，并更新 `index.jsonl` 与 SHA-256。已发布 benchmark 应提交到 Git，保证 Python/C++ 使用完全相同的问题。
+
+问题文件不保存算法答案。Exact Oracle 和 baseline 结果写入 `benchmark/reference_results/`，并通过 benchmark ID 和 SHA-256 关联。
+
+## SimAI 集成与 Submodule
+
+`benchmark_generate/simai/` 是唯一允许依赖 SimAI 的区域，用于：
+
+- AICB workload 和 pipeline DAG 展开；
+- effective DAG 审计；
+- BFS route 与 link/NIC resource 转换；
+- 生成可提交的真实派生 JSON snapshot。
+
+独立仓库创建后，SimAI 固定在：
+
+```text
+third_party/simai-flow-scheduler/
+```
+
+初始化方式：
+
+```bash
+git submodule update --init --recursive
+```
+
+路径发现顺序为：
+
+1. 环境变量 `SIMAI_FLOW_SCHEDULER_ROOT`；
+2. `third_party/simai-flow-scheduler`；
+3. 当前嵌套开发阶段的父仓库。
+
+未初始化 SimAI 时，Loader、静态 benchmark 和全部核心算法仍必须正常工作。只有 `tests/integration/` 和 `benchmark_generate.simai` 需要 SimAI。
+
+## 扩展算法
+
+1. 在对应 `src/dag_heuristic/algorithms/` 目录实现算法。
+2. 输入使用公开 `Benchmark`，或通过 `core/conversion.py` 转成场景内部状态。
+3. 返回结果必须公开整数 `makespan`；建议同时提供动作和任务时间线。
+4. 在 `registry.py` 注册名称、场景、family、WAIT 和 exact 能力。
+5. 添加一个能区分新算法和已有 baseline 的固定测试。
+6. 若算法针对某类反例，将问题文件加入 `benchmark/**/adversarial/`。
+7. 理论近似比必须附证明；有限样本最坏值不能写成理论保证。
+
+算法不得读取 benchmark metadata 来获得答案，也不得导入 `benchmark_generate` 或 SimAI。
+
+## 扩展 Benchmark Generator
+
+新增生成器时必须：
+
+- 接受显式 seed 和输出目录；
+- 记录来源、生成参数和版本；
+- 输出后通过公共 Validator；
+- 保证同版本、同 seed、同参数逐字节可复现；
+- 将 route、带宽和 workload 语义完全投影到标准 task/resource 字段；
+- 不把私有 workload 或大型输入提交到仓库。
+
+真实 SimAI 转换放入 `benchmark_generate/simai/`；纯随机和攻击生成器不能导入 SimAI。
+
+## 测试
+
+核心与当前可用集成测试：
 
 ```powershell
-python -m DAG_heuristic.run complex_chain `
-  --algorithm depth2_wait2 --category adversarial
+python -m pytest -q
 ```
 
-运行多通道真实转换集，并保存 JSON：
+当前基线：
 
-```powershell
-python -m DAG_heuristic.run muti_channel `
-  --algorithm rollout_optional2 --category real `
-  --output DAG_heuristic/outputs/muti_channel_real.json
+```text
+45 standalone tests
+54 tests when the SimAI integration checkout is available
+57 benchmark JSON files validated
+15 adversarial instances have exact reference results
 ```
 
-也可以使用便捷入口：
+发布独立仓库前还应在未初始化 submodule 的干净环境中运行核心测试，并在递归 clone 的 CI job 中单独运行 `tests/integration/`。
 
-```powershell
-python DAG_heuristic/scripts/run_parallel_chain.py --algorithm longest_tail
-python DAG_heuristic/scripts/run_complex_chain.py --algorithm rollout_wait2
-python DAG_heuristic/scripts/run_muti_channel.py --algorithm rollout_optional2
-```
-
-运行全部迁移后测试：
-
-```powershell
-python -m pytest `
-  DAG_heuristic/tests `
-  DAG_heuristic/single_channel/parallel_chain/tests `
-  DAG_heuristic/single_channel/complex_chain/tests `
-  DAG_heuristic/muti_channel/tests -q
-```
-
-Exact 算法用于给小实例提供最优值。比较 heuristic 时，建议同时记录最优率、平均近似比、最坏近似比和算法运行时间，不能把有限测试集上的最大比值写成理论近似界。
-
-## 扩展算法的方法
-
-先在目标场景的 `algorithms.py` 实现求解函数，再在同目录 `interface.py` 注册。求解函数接收一个场景实例，并返回带整数 `makespan` 的结果对象。
-
-以下是并行链算法的最小示例：
-
-```python
-from DAG_heuristic.common.interface import AlgorithmSpec
-from DAG_heuristic.single_channel.parallel_chain.interface import register
-
-
-def solve_my_algorithm(instance):
-    # 根据不可抢占、单 channel 语义生成调度结果。
-    ...
-
-
-register(
-    AlgorithmSpec(
-        name="my_algorithm",
-        solve=solve_my_algorithm,
-        description="Describe the scheduling decision in one sentence.",
-        exact=False,
-        supports_wait=False,
-    )
-)
-```
-
-注册只是让当前 Python 进程可见。要让 CLI 默认加载算法，应把 `AlgorithmSpec` 静态加入相应 `interface.py` 的 `ALGORITHMS`。
-
-提交新算法至少应包含：
-
-1. 注册表条目和清楚的决策规则说明；
-2. 一个能区分该算法与已有 baseline 的固定测试；
-3. 在固定随机种子上的性能和运行时间；
-4. 若声称解决某类失败案例，将该案例加入 `adversarial.py`；
-5. 若利用真实结构，将来源和转换过程加入 `real.py`；
-6. 若声称近似比，提供独立证明和紧例。
-
-## 扩展场景或基础代码的方法
-
-如果现有三个场景不能表达新问题，按以下边界扩展：
-
-1. 先写清任务、资源、抢占、等待、带宽和目标函数语义；不要直接复用名字相近但语义不同的状态机。
-2. 在独立目录定义 instance 和 schedule/result 类型，保持结果具有整数 `makespan`。
-3. 实现合法动作生成、状态转移、完成事件推进和终止判定；所有依赖必须存在且无环。
-4. 为小实例实现或适配 exact oracle，用它校验 heuristic，而不是用另一个 heuristic 当真值。
-5. 建立 `random`、`adversarial`、`real` 三类 testset，并在 `run.py` 增加场景分派。
-6. 添加接口测试、语义测试、oracle 交叉验证和 CLI smoke test。
-
-修改公共层时要特别谨慎：
-
-- `common/model.py` 和 `common/oracle.py` 是单通道不可抢占语义的核心，不是普通工具函数集合；
-- 修改合法动作或 `WAIT` 条件后，要同时验证 model、oracle 和所有单通道算法；
-- 多通道资源集合与单通道状态不同，不要把多资源逻辑硬塞进单通道 model；
-- 真实 SimAI workload 的转换应放在 adapter/testset 层，避免让算法依赖主模拟器的全局状态。
-
-## 当前已注册算法
-
-| 场景 | 算法 |
-|---|---|
-| 并行链 | `longest_tail`、`rollout_flow2`、`rollout_wait2`、`beam_wait8`、`beam_wait32`、`exact_optional` |
-| 一般 DAG | `longest_tail`、`join_bonus`、`rollout_flow2`、`rollout_wait2`、`depth2_wait2`、`beam_wait8`、`exact_optional` |
-| 多通道 | `longest_tail_pack`、`resource_pack`、`bottleneck_pack`、`rollout_maximal2`、`rollout_optional2`、`exact_optional` |
-
-详细实验结论、理论证明和反例位于 `docs/heuristic总结.md`、`docs/heuristic进度.md` 和 `docs/heuristic反例.md`。README 只定义当前可运行代码的边界和协作方式。
+研究过程、理论证明和反例说明保存在 `docs/`。其中部分历史段落引用迁移前路径，应以本 README 和当前代码结构为准。

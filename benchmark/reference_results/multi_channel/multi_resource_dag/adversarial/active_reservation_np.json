@@ -1,0 +1,7 @@
+{
+  "benchmark_id": "active_reservation_np",
+  "benchmark_sha256": "0d049a11c8fb75c5a6eb18ce8baad71e29ba6a68aaa151788ae4b90fa15da989",
+  "optimal_makespan": 5,
+  "oracle": "exact_optional",
+  "schema_version": "1.0"
+}

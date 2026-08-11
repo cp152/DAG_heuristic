@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dag-heuristic"
+version = "0.1.0"
+description = "Language-independent DAG scheduling benchmarks and non-preemptive heuristics"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.9"]
+
+[project.scripts]
+dag-heuristic = "dag_heuristic.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src", "."]
+include = ["dag_heuristic*", "benchmark_generate*"]
+exclude = ["tests*", "third_party*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", ".", ".."]
+testpaths = ["tests"]
+markers = ["simai: requires the optional SimAI integration checkout"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100

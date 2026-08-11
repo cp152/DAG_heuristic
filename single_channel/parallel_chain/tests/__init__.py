@@ -1,2 +1,0 @@
-"""Parallel-chain regression tests."""
-

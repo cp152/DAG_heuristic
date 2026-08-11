@@ -1,2 +1,0 @@
-"""General-DAG regression tests."""
-
