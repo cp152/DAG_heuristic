@@ -145,9 +145,8 @@ def print_dag(data: dict[str, Any]) -> None:
     resources = data.get("resources", [])
     if not resources:
         raise ValueError("至少需要一个资源")
-    resource_kinds = {r["kind"] for r in resources}
-    if len(resource_kinds) != 1:
-        raise ValueError(f"resources 种类必须唯一，当前存在: {resource_kinds}")
+    if len(resources) != 1:
+        raise ValueError(f"resources 种类必须唯一，当前存在: {resources}")
 
     # 2. 获取任务列表
     tasks = data.get("tasks", [])
