@@ -5,9 +5,12 @@ from __future__ import annotations
 from collections import defaultdict, deque
 
 try:
-    from benchmark.model import Benchmark
+    from src.benchmark.model import Benchmark
 except:
-    from model import Benchmark
+    try:
+        from benchmark.model import Benchmark
+    except:
+        from model import Benchmark
 
 
 class BenchmarkValidationError(ValueError):

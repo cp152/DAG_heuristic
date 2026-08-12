@@ -58,6 +58,7 @@ def generate_index(root_dir, output_file="index.jsonl"):
 
 if __name__ == "__main__":
     # 可通过命令行参数指定文件夹，默认当前目录
-    target_dir = sys.argv[1] if len(sys.argv) > 1 else "../benchmark/"
-    generate_index(target_dir)
+    target_dir = sys.argv[1] if len(sys.argv) > 2 else "./benchmark"
+    result_dir = sys.argv[2] if len(sys.argv) > 2 else "./benchmark/index.jsonl"
+    generate_index(target_dir,result_dir)
     print("index.jsonl 生成完毕。")

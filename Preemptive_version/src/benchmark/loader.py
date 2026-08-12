@@ -6,13 +6,19 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from benchmark.model import Benchmark, Resource, Task
+    from src.benchmark.model import Benchmark, Resource, Task
 except:
-    from model import Benchmark, Resource, Task
+    try:
+        from benchmark.model import Benchmark, Resource, Task
+    except:
+        from model import Benchmark, Resource, Task
 try:
-    from benchmark.validator import BenchmarkValidationError, validate_benchmark
+    from src.benchmark.validator import BenchmarkValidationError, validate_benchmark
 except:
-    from validator import BenchmarkValidationError, validate_benchmark
+    try:
+        from benchmark.validator import BenchmarkValidationError, validate_benchmark
+    except:
+        from validator import BenchmarkValidationError, validate_benchmark
 
 
 def benchmark_from_dict(payload: dict[str, Any]) -> Benchmark:

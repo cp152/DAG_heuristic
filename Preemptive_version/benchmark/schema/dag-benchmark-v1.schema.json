@@ -21,7 +21,7 @@
       "additionalProperties": false,
       "required": ["preemptive", "decision_epoch", "optional_idle", "compute_model", "resource_model"],
       "properties": {
-        "preemptive": {"const": false},
+        "preemptive": {"const": true},
         "decision_epoch": {"const": "task_completion"},
         "optional_idle": {"const": true},
         "compute_model": {"const": "unbounded_parallel"},

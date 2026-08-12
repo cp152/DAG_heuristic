@@ -11,9 +11,9 @@ from contextlib import redirect_stdout
 
 def process_index(categorys, familys, test_loc):
     # ---------- 硬编码地址（请按实际情况修改） ----------
-    INDEX_JSONL_PATH = Path("../benchmark/index.jsonl")
-    EXE_2 = Path("./core/counter.exe")
-    RESULTS_DIR = Path("../benchmark/reference_results")
+    INDEX_JSONL_PATH = Path("./benchmark/index.jsonl")
+    EXE_2 = Path("./src/core/counter.exe")
+    RESULTS_DIR = Path("./benchmark/reference_results")
     # --------------------------------------------------
 
     # 检查 test_loc 是否以 .exe 结尾
@@ -153,4 +153,4 @@ def process_index(categorys, familys, test_loc):
 
     return result_stats
 
-process_index(["adversarial","random","real"],["complex_chain","parallel_chain"],"./single_channel/l1.exe")
+process_index(["adversarial","random","real"],["complex_chain","parallel_chain"],"./src/single_channel/l1.exe")

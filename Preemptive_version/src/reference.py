@@ -11,9 +11,9 @@ from contextlib import redirect_stdout
 import benchmark.loader
 
 # ---------- 2. 配置 ----------
-INPUT_DIR = Path("../benchmark/single_channel")          # 存放 JSON 文件的目录
-ANSWER_DIR = Path("../benchmark/reference_results/single_channel")       # 存放输出的目录
-CPP_EXECUTABLE = "./core/oracle"      # C++ 编译的可执行文件
+INPUT_DIR = Path("./benchmark/single_channel")          # 存放 JSON 文件的目录
+ANSWER_DIR = Path("./benchmark/reference_results/single_channel")       # 存放输出的目录
+CPP_EXECUTABLE = "./src/core/oracle"      # C++ 编译的可执行文件
 
 def main():
     # 确保答案目录存在

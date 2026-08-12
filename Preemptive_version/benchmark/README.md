@@ -1,11 +1,3 @@
-# 该文件复制自不可抢占部分，暂未修改！！！
-
-
-
-
-
-
-
 # DAG Benchmark 数据集
 
 `benchmark/` 保存可由 Python、C++ 或其它语言直接读取的调度问题。每个 JSON 都是完整、自包含的 DAG；使用数据不需要安装本仓库的算法，也不需要 SimAI。
@@ -28,20 +20,13 @@ benchmark/
 │       ├── random/
 │       ├── adversarial/
 │       └── real/
-├── muti_channel/
-│   ├── random/
-│   ├── adversarial/
-│   └── real/
 └── reference_results/
     ├── single_channel/
     │   ├── parallel_chain/adversarial/
     │   └── complex_chain/adversarial/
-    └── muti_channel/adversarial/
 ```
 
-`muti_channel` 不再增加 `complex_chain` 中间目录。其 JSON 中的 `family` 仍为 `complex_chain`，因为它允许一般 fork/join DAG。
-
-## 三种问题场景
+## 两种问题场景
 
 ### `single_channel/parallel_chain`
 
@@ -50,10 +35,6 @@ benchmark/
 ### `single_channel/complex_chain`
 
 一般单通道 DAG，可以包含 fork、join、多层依赖、PP/TP/DP 角色和 optimizer barrier。所有 communication 都使用 `channel:0`；计算节点可以并行，除非 DAG 边显式限制它们。
-
-### `muti_channel`
-
-一般 DAG 中的 communication 可以占用一个或多个固定排他资源，例如 link、NIC 或共享上行链路。资源集合不相交的通信可以并行；一条通信开始后持续占用全部所需资源直到完成。
 
 ## 数据分类
 
@@ -71,19 +52,7 @@ benchmark/
 |---|---:|---:|---:|---:|
 | `single_channel/parallel_chain` | 10 | 13 | 2 | 25 |
 | `single_channel/complex_chain` | 10 | 16 | 7 | 33 |
-| `muti_channel` | 10 | 4 | 3 | 17 |
-| 总计 | 30 | 33 | 12 | 75 |
-
-能够从历史实验精确恢复的代表性反例已经固化，包括：
-
-- Longest-tail、LRPT double-count、5/4 和 tight-2 构造；
-- 固定 Beam 反例；
-- `random_chain_14/52/60/70/77/86/98`；
-- `random_join_23/30/40/46/60`；
-- `combined_chain_14/70/86`；
-- 多资源下的 disjoint/shared route、非最大启动和 active reservation。
-
-没有保存原始结构、无法由 seed 或历史 fixture 确定复现的临时样例没有被猜测性重建。
+| 总计 | 20 | 29 | 9 | 58 |
 
 ## JSON 核心字段
 
@@ -97,7 +66,7 @@ benchmark/
   "objective": "makespan",
   "time_unit": "tick",
   "semantics": {
-    "preemptive": false,
+    "preemptive": true,
     "decision_epoch": "task_completion",
     "optional_idle": true,
     "compute_model": "unbounded_parallel",
@@ -170,7 +139,6 @@ v1 不允许未知顶层字段。增加可选 metadata 不需要提高 major ver
 
 - `single_channel`：问题必须恰好定义 `channel:0`，每个 communication 必须恰好使用 `["channel:0"]`。
 - `parallel_chain`：每个节点入度和出度均不超过 1，每个弱连通分量应为一条 compute/communication 交替链。
-- `muti_channel`：可以定义任意数量的排他资源，一条 communication 可以同时占用多个资源；其 `family` 固定为 `complex_chain`。
 
 其它语言实现 Loader 时至少检查：
 
@@ -184,18 +152,17 @@ v1 不允许未知顶层字段。增加可选 metadata 不需要提高 major ver
 
 ## 调度语义
 
-- compute 和 communication 都不可抢占，开始后必须连续执行到完成。
+- communication 可抢占，开始后必须连续执行到完成。
 - `dependencies` 是 finish-to-start 依赖。
 - ready compute 自动开始；有限 GPU 串行关系应已经表示为 DAG 边。
 - communication 在整个持续时间内独占 `resources` 列出的全部资源。
-- 调度器只在任务完成事件后选择新的通信动作。
 - 资源空闲时允许主动等待到未来的释放事件。
 - 目标固定为最小化 DAG makespan。
 - v1 使用整数时间；compute 可以为零，communication 必须大于零。
 
-这里研究的是任务开始顺序，不是可抢占带宽分片，也不是连续带宽比例分配。
-
 ## 使用数据
+
+待补充仓库测试。
 
 Python：
 
@@ -214,12 +181,6 @@ print(case.benchmark_id, len(case.tasks))
 
 C++ 或其它语言可以直接按照本 README 和 JSON Schema 实现 Loader，无需调用 Python。
 
-运行仓库算法：
-
-```powershell
-python src/cli.py benchmark/muti_channel/adversarial/nonmaximal_start_np.json --algorithm rollout_optional2
-```
-
 ## `index.jsonl`
 
 索引每行是一个 JSON object，包含 benchmark `id`、相对路径 `path`、`scenario`、`family`、`category` 和问题文件 SHA-256。
@@ -228,7 +189,7 @@ python src/cli.py benchmark/muti_channel/adversarial/nonmaximal_start_np.json --
 
 ## 精确参考结果
 
-`reference_results/` 镜像问题文件相对路径，只保存答案，不重复保存 DAG。当前 33 个 adversarial 小图都有 reference：
+`reference_results/` 镜像问题文件相对路径，只保存答案，不重复保存 DAG。当前 58 个图都有 reference：
 
 ```json
 {
@@ -240,7 +201,7 @@ python src/cli.py benchmark/muti_channel/adversarial/nonmaximal_start_np.json --
 }
 ```
 
-使用 reference 前必须核对 SHA-256。哈希不一致说明问题已经变化，旧答案不能继续使用。仓库测试会重新运行 Exact Oracle 核对全部 reference，而不只是检查格式和哈希。
+使用 reference 前必须核对 SHA-256。哈希不一致说明问题已经变化，旧答案不能继续使用。
 
 ## 添加或修改问题
 
@@ -258,7 +219,7 @@ python -m benchmark_generate reference --output benchmark
 2. 遵循本 README 中的 v1 格式，明确时间单位、依赖和资源。
 3. 用 Python Loader 验证文件。
 4. 更新 `index.jsonl`。
-5. adversarial 小图应重算 reference；random 和大型 real 图通常不生成 exact 标签。
+5. adversarial 小图应重算 reference；random 和大型 real 图也可以尝试计算 reference。
 6. 添加测试并说明该样例覆盖的语义或算法失败模式。
 
 不要在问题 JSON 中写 heuristic 或最优答案，避免算法读取 metadata 获得答案；答案属于 `reference_results/`。
