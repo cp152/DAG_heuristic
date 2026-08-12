@@ -410,7 +410,6 @@ int main(int argc, char* argv[]) {
         cin >> c >> weight[i];
         type[i] = (c == 'c' ? 0 : 1);
         if(weight[i] == 0)  type[i] = 0;
-        n_t += (type[i] == 1);
     }
     for (int i = 1; i <= m; ++i) {
         int u,v;

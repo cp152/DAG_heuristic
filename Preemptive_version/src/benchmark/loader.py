@@ -30,7 +30,7 @@ def benchmark_from_dict(payload: dict[str, Any]) -> Benchmark:
     if missing:
         raise BenchmarkValidationError(f"missing top-level fields: {sorted(missing)}")
     expected_semantics = {
-        "preemptive": False,
+        "preemptive": True,
         "decision_epoch": "task_completion",
         "optional_idle": True,
         "compute_model": "unbounded_parallel",
@@ -85,7 +85,7 @@ def benchmark_to_dict(benchmark: Benchmark) -> dict[str, Any]:
         "objective": benchmark.objective,
         "time_unit": benchmark.time_unit,
         "semantics": {
-            "preemptive": False,
+            "preemptive": True,
             "decision_epoch": "task_completion",
             "optional_idle": True,
             "compute_model": "unbounded_parallel",
