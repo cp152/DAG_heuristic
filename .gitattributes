@@ -1,3 +1,0 @@
-# Keep benchmark bytes and their SHA-256 hashes stable across platforms.
-benchmark/**/*.json text eol=lf
-benchmark/**/*.jsonl text eol=lf

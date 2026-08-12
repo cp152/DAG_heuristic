@@ -1,3 +1,0 @@
-[submodule "third_party/simai-flow-scheduler"]
-	path = third_party/simai-flow-scheduler
-	url = https://github.com/violetandevergarden/simai-flow-scheduler.git
