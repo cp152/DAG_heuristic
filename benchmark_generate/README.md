@@ -1,0 +1,142 @@
+# Benchmark 生成工具
+
+`benchmark_generate/` 负责把随机实例、历史反例和 SimAI workload 转换成 `benchmark/` 下的语言无关 JSON。生成器只在离线准备数据时使用；调度算法运行时不应导入本模块。
+
+## 目录结构
+
+```text
+benchmark_generate/
+├── __main__.py                 # `python -m benchmark_generate` 入口
+├── export.py                   # 组织并写出当前固定数据集
+├── cases.py                    # 随机、反例、LLM motif 和小拓扑 route 样例
+├── convert.py                  # 内部 DAG/链/资源实例转成公开 Benchmark
+├── reference.py                # 调用 Exact Oracle 生成最优值 sidecar
+└── simai/
+    ├── bootstrap.py            # 查找可选 SimAI checkout
+    └── export.py               # AICB/pipeline workload 转标准 benchmark
+```
+
+顶层生成代码不依赖 SimAI。只有 `simai/` 可以导入外部模拟器。
+
+## 生成默认集合
+
+从仓库根目录运行：
+
+```powershell
+$env:PYTHONPATH="src;."
+python -m benchmark_generate all --samples 10 --seed 260819 --output benchmark
+```
+
+该命令会生成：
+
+- 每个场景 10 个固定 seed random 样例；
+- 已登记的 adversarial 样例；
+- 已整理进固定集合的 real/LLM motif；
+- `benchmark/index.jsonl` 及问题文件 SHA-256。
+
+`--samples` 是每个随机场景的数量，不是全仓库随机样例总数。目前有三个随机场景，因此默认总计 30 个 random 文件。
+
+只生成随机数据：
+
+```powershell
+python -m benchmark_generate random --samples 30 --seed 1234 --output my_benchmark
+```
+
+临时大规模随机实验应写到新目录，不要覆盖仓库中用于回归的固定 10 个样例。
+
+## 生成精确参考答案
+
+```powershell
+python -m benchmark_generate reference --output benchmark
+```
+
+该命令遍历 `category=adversarial` 的问题，调用对应场景的 `exact_optional`，在 `benchmark/reference_results/` 写出：
+
+- `benchmark_id`；
+- 原问题文件 SHA-256；
+- Oracle 名称；
+- `optimal_makespan`。
+
+Exact Oracle 对大图可能产生指数级开销。只有规模可控、可以在测试中重复求解的小图才应生成 reference；不要给大型真实 DAG 或超时结果标记“精确最优”。
+
+## 固定 seed 与历史反例
+
+- 默认 random suite：seed `260819`，不同场景使用确定性的派生 seed。
+- R1 WAIT-hard 并行链：seed `260813` 的索引 `14/52/60/70/77/86/98`。
+- R1–R3 random-join 反例：seed `260817` 的索引 `23/30/40/46/60`。
+- combined-hard：seed `260813` 的 `combined_chain_14/70/86`。
+
+这些样例虽然来自随机序列，但因为经过筛选、用于暴露特定失败模式，所以写入 `adversarial/`；普通未筛选样例才属于 `random/`。
+
+## 添加随机或手工生成器
+
+1. 在 `cases.py` 中添加函数，显式接收 `random.Random` 或其它生成参数。
+2. 保证相同代码版本、seed 和参数产生相同任务、依赖和时长。
+3. 在 `export.py::current_cases` 中决定是否加入固定集合。
+4. 使用 `convert.py` 转成公开 `Benchmark`，不要让 JSON 包含 Python 专用对象。
+5. 写出后通过公共 Loader/Validator。
+6. 在 `tests/test_generators.py` 添加固定 seed 可复现测试。
+7. 若属于算法反例，记录攻击对象和来源；若属于 random，仓库通常只保留约 10 个代表样例。
+
+`export_suite` 会更新它负责生成的文件和索引，也会把输出目录中其它合法 JSON 纳入索引；它不会自动判断旧文件是否应该删除。改变固定集合后必须检查是否存在过期文件。
+
+## 从 SimAI 生成真实 DAG
+
+SimAI 查找顺序为：
+
+1. 环境变量 `SIMAI_FLOW_SCHEDULER_ROOT`；
+2. `third_party/simai-flow-scheduler/`；
+3. 开发环境中与本仓库同级的 `simai-flow-scheduler/`。
+
+独立发布时推荐固定 submodule：
+
+```powershell
+git submodule update --init --recursive
+```
+
+`simai/export.py` 会先调用指定 pipeline builder，再用对应 serializer 把 GPU compute 顺序加入 effective DAG。communication 时长按 `ceil(size_bytes / bandwidth)` 转成整数微秒。
+
+导出单通道 benchmark：
+
+```powershell
+python -m benchmark_generate.simai.export `
+  --aicb path/to/workload.txt `
+  --mode zero_bubble `
+  --id zb_example `
+  --output my_benchmark.json
+```
+
+增加 `--topology` 后，导出器会通过 SimAI 的 BFS 路由把每条 flow 转成固定 directed-link 和 NIC resource set，并生成 `muti_channel` benchmark：
+
+```powershell
+python -m benchmark_generate.simai.export `
+  --aicb path/to/workload.txt `
+  --mode 1f1b `
+  --topology path/to/topology.json `
+  --id routed_example `
+  --output routed_example.json
+```
+
+省略 `--aicb` 会使用一个很小的确定性输入，适合检查环境。支持的模式为 `1f1b`、`interleaved_1f1b`、`zero_bubble`、`bidirectional` 和 `dualpipe`。
+
+生成完成后，使用者不应再需要 SimAI。提交 real benchmark 时应记录 workload、pipeline mode、带宽和 topology 来源，但不要提交私有输入或大型原始 trace。
+
+## 格式注意事项
+
+- `duration` 必须转换为整数时间单位，communication duration 必须大于零。
+- task ID 必须唯一，依赖必须存在且无环。
+- 单通道通信必须且只能使用 `channel:0`。
+- 多通道通信必须列出完整固定资源集合，包括需要建模的 link/NIC 冲突。
+- route 只在生成阶段计算，算法阶段不会重新选路。
+- 不得把抢占或连续带宽比例共享偷偷编码进 v1 数据。
+- 修改已提交问题后必须更新 `index.jsonl` 和对应 reference hash。
+
+## 验证
+
+```powershell
+$env:PYTHONPATH="src;."
+python -m pytest tests/test_generators.py tests/test_benchmark_format.py -q
+python -m pytest tests/integration -q
+```
+
+第二条命令需要可用的 SimAI checkout；纯随机、固定反例和参考答案生成不需要 SimAI。

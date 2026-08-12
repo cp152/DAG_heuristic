@@ -1,0 +1,7 @@
+{
+  "benchmark_id": "random_join_30",
+  "benchmark_sha256": "c8ddc994d032e9e0c56febbf2ac57e3e294a3e81d2d868aa8264443a6887660d",
+  "optimal_makespan": 22,
+  "oracle": "exact_optional",
+  "schema_version": "1.0"
+}
