@@ -188,8 +188,144 @@ def print_dag(data: dict[str, Any]) -> None:
             u_num = id_to_num[dep_id]
             print(f"{u_num} {v_num}")
 
-# 示例调用（假设 data 已经读取）:
+from typing import List, Dict, Any
+
+def convert_simple_to_json(
+    simple_str: str,
+    id: str,
+    category: str = "adversarial",
+    family: str = "complex_chain"
+) -> Dict[str, Any]:
+    """
+    将简化表述的图转换为标准 DAG 调度 JSON 结构。
+
+    参数:
+        simple_str (str): 符合格式的多行字符串
+        id (str): 任务的标识符
+        category (str): 类别，默认 "adversarial"
+        family (str): 家族，默认 "complex_chain"
+
+    返回:
+        dict: 符合 JSON Schema 的完整结构
+
+    异常:
+        ValueError: 输入格式错误时抛出
+    """
+    # 去除首尾空白，并按行分割，忽略空行
+    lines = [line.strip() for line in simple_str.strip().splitlines() if line.strip()]
+    if not lines:
+        raise ValueError("输入为空")
+
+    # 解析第一行：n m
+    first = lines[0].split()
+    if len(first) != 2:
+        raise ValueError("第一行必须包含两个整数：n 和 m")
+    try:
+        n, m = map(int, first)
+    except ValueError:
+        raise ValueError("第一行必须为整数")
+
+    if len(lines) < 1 + n + m:
+        raise ValueError(f"输入行数不足：需要 {1+n+m} 行，实际 {len(lines)} 行")
+
+    # 解析节点信息（第2～1+n行）
+    node_types = []   # 存储每个节点的类型字符 'c' 或 't'
+    node_durations = []  # 存储每个节点的时长
+    for i in range(1, 1 + n):
+        parts = lines[i].split()
+        if len(parts) != 2:
+            raise ValueError(f"第 {i+1} 行必须包含类型和时长两个字段")
+        typ, dur_str = parts[0], parts[1]
+        if typ not in ('c', 't'):
+            raise ValueError(f"类型只能是 'c' 或 't'，得到 '{typ}'")
+        try:
+            dur = int(dur_str)
+        except ValueError:
+            raise ValueError(f"时长必须是整数，得到 '{dur_str}'")
+        node_types.append(typ)
+        node_durations.append(dur)
+
+    # 解析依赖边（第2+n～1+n+m行）
+    # 使用列表存储每个节点的前驱依赖（用字符串 id 表示）
+    dependencies: List[List[str]] = [[] for _ in range(n)]
+    for i in range(1 + n, 1 + n + m):
+        parts = lines[i].split()
+        if len(parts) != 2:
+            raise ValueError(f"依赖行 {i+1} 必须包含 u 和 v 两个整数")
+        try:
+            u, v = map(int, parts)
+        except ValueError:
+            raise ValueError(f"依赖行 {i+1} 必须为整数")
+        if u < 1 or v < 1 or u > n or v > n:
+            raise ValueError(f"节点编号超出范围 (1~{n})，得到 u={u}, v={v}")
+        # 将前驱节点 u 加入 v 的依赖列表（v 依赖于 u）
+        dependencies[v-1].append(str(u))
+
+    # 构建 tasks 列表
+    tasks = []
+    for idx in range(n):
+        typ = node_types[idx]
+        dur = node_durations[idx]
+        task_id = str(idx + 1)          # 节点编号作为 id
+        kind = "compute" if typ == 'c' else "communication"
+        # 通信任务需要 channel:0 资源，计算任务无资源需求
+        resources = ["channel:0"] if kind == "communication" else []
+        task = {
+            "id": task_id,
+            "kind": kind,
+            "duration": dur,
+            "dependencies": dependencies[idx],
+            "resources": resources
+        }
+        tasks.append(task)
+
+    # 构造完整的 JSON 结构（固定字段与样例保持一致）
+    result = {
+        "schema_version": "1.0",
+        "id": id,
+        "scenario": "single_channel",
+        "family": family,
+        "category": category,
+        "objective": "makespan",
+        "time_unit": "tick",
+        "semantics": {
+            "preemptive": True,
+            "decision_epoch": "task_completion",
+            "optional_idle": True,
+            "compute_model": "unbounded_parallel",
+            "resource_model": "exclusive"
+        },
+        "resources": [
+            {"id": "channel:0", "kind": "channel"}
+        ],
+        "tasks": tasks,
+        "metadata": {
+            "description": "",
+            "generator": "",
+            "parameters": {},
+            "seed": None
+        }
+    }
+    return result
+
+
+# # ===== 使用示例 =====
 # if __name__ == "__main__":
-#     import json
-#     raw = json.loads(sys.stdin.read())
-#     print_dag(raw)
+#     simple_input = """8 6
+# t 2
+# c 3
+# t 1
+# c 1
+# t 1
+# c 2
+# t 2
+# c 1
+# 1 2
+# 2 3
+# 3 4
+# 5 6
+# 6 7
+# 7 8"""
+#     result = convert_simple_to_json(simple_input, id="example_graph")
+#     # 输出格式化的 JSON（便于查看）
+#     print(json.dumps(result, indent=2, ensure_ascii=False))

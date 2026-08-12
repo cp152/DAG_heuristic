@@ -19,6 +19,8 @@ def main():
     # 确保答案目录存在
     ANSWER_DIR.mkdir(parents=True, exist_ok=True)
 
+    err_list = []
+
     # 遍历输入目录中的所有 .json 文件
     json_files = sorted(INPUT_DIR.rglob("*.json"))
     if not json_files:
@@ -34,6 +36,7 @@ def main():
             file_bytes = json_path.read_bytes()
             sha256_hash = hashlib.sha256(file_bytes).hexdigest()
         except Exception as e:
+            err_list.append(f"错误: 无法计算 {json_path} 的 SHA-256: {e}")
             print(f"错误: 无法计算 {json_path} 的 SHA-256: {e}", file=sys.stderr)
             continue
 
@@ -41,6 +44,7 @@ def main():
         try:
             data = json.loads(file_bytes)
         except Exception as e:
+            err_list.append(f"错误: {json_path} 不是合法的 JSON 文件: {e}")
             print(f"错误: {json_path} 不是合法的 JSON 文件: {e}", file=sys.stderr)
             continue
 
@@ -61,11 +65,13 @@ def main():
             )
             cpp_output = result.stdout
         except subprocess.CalledProcessError as e:
+            err_list.append(f"错误: C++ 程序处理 {rel_path} 失败")
             print(f"错误: C++ 程序处理 {rel_path} 失败", file=sys.stderr)
             # print(python_output)
             print(e.stderr, file=sys.stderr)
             continue
         except FileNotFoundError:
+            err_list.append(f"错误: 找不到 C++ 可执行文件 '{CPP_EXECUTABLE}'")
             print(f"错误: 找不到 C++ 可执行文件 '{CPP_EXECUTABLE}'", file=sys.stderr)
             sys.exit(1)
 
@@ -73,6 +79,7 @@ def main():
         try:
             optimal_makespan = int(cpp_output.strip())
         except ValueError:
+            err_list.append(f"错误: C++ 输出无法解析为整数: {cpp_output.strip()}")
             print(f"错误: C++ 输出无法解析为整数: {cpp_output.strip()}", file=sys.stderr)
             continue
 
@@ -96,6 +103,9 @@ def main():
             f.write('\n')   # 末尾换行
 
         print(f"  -> 已保存 {out_path}")
+
+    for s in err_list:
+        print(s,file=sys.stderr)
 
 if __name__ == "__main__":
     main()

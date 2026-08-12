@@ -45,6 +45,7 @@ def process_index(categorys, familys, test_loc):
         print("警告：没有找到符合条件的条目。")
         return None
 
+    count = 0
     C_list = []
     D_list = []
     ratio_list = []
@@ -119,20 +120,30 @@ def process_index(categorys, familys, test_loc):
             with open(result_json_path, 'r', encoding='utf-8') as f:
                 result_data = json.load(f)
             D = float(result_data["optimal_makespan"])
+            if computed_sha != result_data.get("benchmark_sha256", ""):
+                print(f"警告：{result_json_path} 的 SHA256 不匹配，跳过")
+                continue
         except Exception as e:
             print(f"错误：读取 {result_json_path} 失败：{e}", file=sys.stderr)
             continue
 
+        count += 1
+        if(C == D):
+            continue
         # 保存数据
         C_list.append(C)
         D_list.append(D)
         ratio_list.append(C / D)
 
     # 统计结果
-    if not C_list:
+    if count == 0:
         print("没有成功处理的条目。")
         return None
 
+    if len(C_list) == 0:
+        print(f"所有 {count} 个样例均正确")
+        return None
+    
     def stats(values):
         return {
             "max": max(values),
@@ -148,8 +159,9 @@ def process_index(categorys, familys, test_loc):
 
     # 输出到控制台
     print("=== 统计结果 ===")
-    print(f"count: {len(C_list)}")
-    print(f"C/D      -> 最大值: {result_stats['C_over_D']['max']}, 最小值: {result_stats['C_over_D']['min']}, 平均值: {result_stats['C_over_D']['avg']}")
+    print(f"count: {count},err_count: {len(C_list)}")
+    print(f"err_ratio: {len(C_list)/count:.6f}")
+    print(f"err部分比值 -> 最大值: {result_stats['C_over_D']['max']}, 最小值: {result_stats['C_over_D']['min']}, 平均值: {result_stats['C_over_D']['avg']}")
 
     return result_stats
 
